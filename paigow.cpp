@@ -13,6 +13,26 @@
 // Types
 //
 
+class Combinations
+{
+public:
+  Combinations(unsigned int total, unsigned int num);
+  ~Combinations();
+
+  bool next();
+
+private:
+  void print() const;
+
+private:
+  const unsigned int _kTotal;
+  const unsigned int _kNum;
+  const unsigned int _kBaseMax;
+
+  unsigned int* _combination;
+};
+
+
 struct Card
 {
   unsigned int value;
@@ -39,8 +59,58 @@ void PrintCard(const Card& card);
 void PrintHand(const std::vector<Card>& cards);
 void PrintGames(const std::vector<Game>& games);
 
-void FirstCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination);
-bool NextCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination);
+
+//
+// Combinations methods
+//
+
+Combinations::Combinations(unsigned int total, unsigned int num) :
+  _kTotal(total),
+  _kNum(num),
+  _kBaseMax(total - num)
+{
+  _combination = new unsigned int[_kNum];
+
+  for (unsigned int i = 0; i < _kNum; ++i)
+    _combination[i] = i;
+  print();
+}
+
+
+Combinations::~Combinations()
+{
+  delete[] _combination;
+}
+
+
+bool Combinations::next()
+{
+  int i = _kNum - 1;
+  while (i >= 0 && _combination[i] == _kBaseMax + i)
+    --i;
+
+  if (i < 0)
+    return false; // We've run out of combinations.
+
+  ++_combination[i];
+  ++i;
+  while (i < (int)_kNum) {
+    _combination[i] = _combination[i - 1] + 1;
+    ++i;
+  }
+
+  print();
+  return true;
+}
+
+
+void Combinations::print() const
+{
+  printf("%3u", _combination[0]);
+  for (unsigned int pos = 1; pos < _kNum; ++pos)
+    printf(" %3u", _combination[pos]);
+  printf("\n");
+}
 
 
 //
@@ -151,45 +221,6 @@ void PrintGames(const std::vector<Game>& games)
 }
 
 
-void FirstCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination)
-{
-  for (unsigned int i = 0; i < numToChoose; ++i)
-    combination[i] = i;
-
-  printf("%3u", combination[0]);
-  for (unsigned int pos = 1; pos < numToChoose; ++pos)
-    printf(" %3u", combination[pos]);
-  printf("\n");
-}
-
-
-bool NextCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination)
-{
-  const unsigned int kBaseMaxVal = total - numToChoose;
-
-  int i = numToChoose - 1;
-  while (i >= 0 && combination[i] == kBaseMaxVal + i)
-    --i;
-
-  if (i < 0)
-    return false; // We've run out of combinations.
-
-  ++combination[i];
-  ++i;
-  while (i < (int)numToChoose) {
-    combination[i] = combination[i - 1] + 1;
-    ++i;
-  }
-
-  printf("%3u", combination[0]);
-  for (unsigned int pos = 1; pos < numToChoose; ++pos)
-    printf(" %3u", combination[pos]);
-  printf("\n");
-
-  return true;
-}
-
-
 int main(int argc, char** argv)
 {
   if (argc != 3) {
@@ -199,13 +230,9 @@ int main(int argc, char** argv)
   unsigned int total = (unsigned int)atoi(argv[1]);
   unsigned int numToChoose = (unsigned int)atoi(argv[2]);
 
-  unsigned int* combination = new unsigned int[numToChoose];
-
-  FirstCombination(total, numToChoose, combination);
-  while (NextCombination(total, numToChoose, combination))
+  Combinations combo(total, numToChoose);
+  while (combo.next())
     ;
-  delete[] combination;
-
 
   /*
   if (argc != 2) {
