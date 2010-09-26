@@ -1,0 +1,14 @@
+- Instead of comparing hands directly, compute a score for each hand and
+  compare scores.
+
+- Skip any hand that has a lower score than the current one?
+
+- Given a deck of 52 cards, the dealer has at most 45 cards to choose from.
+  (45 choose 5) * (40 choose 2) == 952972020, which will fit in 30 bits.
+
+- There ought to be a more direct way to calculate the number of
+  wins/draws/lossed than iterating through them all.
+
+- If ranking is only based on wins, just calculate the number of wins?
+
+- Score calculation needs to be as fast as possible.
