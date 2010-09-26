@@ -36,7 +36,11 @@ std::vector<Card> ParseHand(char* line);
 std::vector<Game> ParseGames(FILE* f);
 
 void PrintCard(const Card& card);
+void PrintHand(const std::vector<Card>& cards);
 void PrintGames(const std::vector<Game>& games);
+
+void FirstCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination);
+bool NextCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination);
 
 
 //
