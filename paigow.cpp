@@ -122,30 +122,88 @@ void PrintCard(const Card& card)
 }
 
 
+void PrintHand(const std::vector<Card>& cards)
+{
+  std::vector<Card>::const_iterator c;
+  for (c = cards.begin(); c != cards.end(); ++c) {
+    printf(" ");
+    PrintCard(*c);
+  }
+}
+
+
 void PrintGames(const std::vector<Game>& games)
 {
   std::vector<Game>::const_iterator g;
   for (g = games.begin(); g != games.end(); ++g) {
     printf("Player:");
-    std::vector<Card>::const_iterator c;
-    for (c = g->playerCards.begin(); c != g->playerCards.end(); ++c) {
-      printf(" ");
-      PrintCard(*c);
-    }
+    PrintHand(g->playerCards);
     printf("\n");
     printf("Dealer:");
-    for (c = g->dealerCards.begin(); c != g->dealerCards.end(); ++c) {
-      printf(" ");
-      PrintCard(*c);
-    }
+    PrintHand(g->dealerCards);
     printf("\n");
     printf("----\n");
   }
 }
 
 
+void FirstCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination)
+{
+  for (unsigned int i = 0; i < numToChoose; ++i)
+    combination[i] = i;
+
+  printf("%3u", combination[0]);
+  for (unsigned int pos = 1; pos < numToChoose; ++pos)
+    printf(" %3u", combination[pos]);
+  printf("\n");
+}
+
+
+bool NextCombination(unsigned int total, unsigned int numToChoose, unsigned int* combination)
+{
+  const unsigned int kBaseMaxVal = total - numToChoose;
+
+  int i = numToChoose - 1;
+  while (i >= 0 && combination[i] == kBaseMaxVal + i)
+    --i;
+
+  if (i < 0)
+    return false; // We've run out of combinations.
+
+  ++combination[i];
+  ++i;
+  while (i < (int)numToChoose) {
+    combination[i] = combination[i - 1] + 1;
+    ++i;
+  }
+
+  printf("%3u", combination[0]);
+  for (unsigned int pos = 1; pos < numToChoose; ++pos)
+    printf(" %3u", combination[pos]);
+  printf("\n");
+
+  return true;
+}
+
+
 int main(int argc, char** argv)
 {
+  if (argc != 3) {
+    fprintf(stderr, "Usage: %s <n> <k>\n", argv[0]);
+    return -1;
+  }
+  unsigned int total = (unsigned int)atoi(argv[1]);
+  unsigned int numToChoose = (unsigned int)atoi(argv[2]);
+
+  unsigned int* combination = new unsigned int[numToChoose];
+
+  FirstCombination(total, numToChoose, combination);
+  while (NextCombination(total, numToChoose, combination))
+    ;
+  delete[] combination;
+
+
+  /*
   if (argc != 2) {
     fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
     return -1;
@@ -168,6 +226,7 @@ int main(int argc, char** argv)
 
   // Print the results.
   PrintGames(games);
+  */
 
   return 0;
 }
