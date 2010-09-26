@@ -99,6 +99,19 @@ def evaluate_hands(my_cards, their_cards):
   my_hands = tuple(all_hands(my_cards))
   my_scores = tuple([ (small_hand_value(low), hand_value(high)) for low, high in my_hands ])
 
+  low_scores = sorted(list(set([low for low, _ in my_scores])), reverse=True)
+  print "%2d low hand scores:" % len(low_scores), low_scores
+  high_scores = sorted(list(set([high for _, high in my_scores])), reverse=True)
+  print "%2d high hand scores:" % len(high_scores), high_scores
+  for i in xrange(len(my_hands)):
+    low_hand, high_hand = my_hands[i]
+    low_score, high_score = my_scores[i]
+    low_score_rank = low_scores.index(low_score)
+    high_score_rank = high_scores.index(high_score)
+    print "Hand #%2d:\t%s %s | %s %s %s %s %s\t\tScore: %4d (#%2d), %9d (#%2d)" % (i,
+        low_hand[0], low_hand[1], high_hand[0], high_hand[1], high_hand[2], high_hand[3], high_hand[4],
+        low_score, low_score_rank, high_score, high_score_rank)
+
   their_scores = tuple([ (small_hand_value(low), hand_value(high)) for low, high in all_hands(their_cards) ])
 
   wins = [0] * len(my_hands)
@@ -130,39 +143,44 @@ def evaluate_hands(my_cards, their_cards):
         #print "DRAW: my_scores=", my_scores[mine], " their_scores=", their_scores[theirs]
         draws[mine] += 1
 
-  results = sorted(zip(my_hands, zip(wins, draws, losses)), key=lambda x: x[1], reverse=True)
+  results = sorted(zip(my_hands, zip(wins, draws, losses), range(len(my_hands))), key=lambda x: x[1], reverse=True)
   best = results[0]
   second_best = results[1]
   worst = results[-1]
   return best, second_best, worst
 
 
-def print_hand(title, low_hand, high_hand, wins, draws, losses):
-  print "%s:\t%s %s | %s %s %s %s %s\t\tW: %d\tD: %d\tL: %d" % (title,
+def print_hand(title, index, low_hand, high_hand, wins, draws, losses):
+  print "%s:\t%s %s | %s %s %s %s %s\t\tW: %9d  D: %9d  L: %9d\t(Hand #%d)" % (title,
       low_hand[0], low_hand[1], high_hand[0], high_hand[1], high_hand[2],
-      high_hand[3], high_hand[4], wins, draws, losses)
-
+      high_hand[3], high_hand[4], wins, draws, losses, index)
 
 
 def main():
-  if len(sys.argv) != 2:
-    print >> sys.stderr, "Usage: %s <infile>" % sys.argv[0]
+  if len(sys.argv) not in (1, 2):
+    print >> sys.stderr, "Usage: %s [<infile>]" % sys.argv[0]
     sys.exit(-1)
 
-  f = open(sys.argv[1])
+  if len(sys.argv) == 2:
+    f = open(sys.argv[1])
+  else:
+    f = sys.stdin
+
   lines = [line.strip() for line in f]
-  f.close()
+
+  if f != sys.stdin:
+    f.close()
 
   i = 1
   for mine, theirs in parse_hands(lines):
     best, second_best, worst = evaluate_hands(mine, theirs)
     print "Hand #%d" % i
-    hand, results = best
-    print_hand("Best", hand[0], hand[1], *results)
-    hand, results = second_best
-    print_hand("2nd", hand[0], hand[1], *results)
-    hand, results = worst
-    print_hand("Worst", hand[0], hand[1], *results)
+    hand, results, index = best
+    print_hand("Best", index, hand[0], hand[1], *results)
+    hand, results, index = second_best
+    print_hand("2nd", index, hand[0], hand[1], *results)
+    hand, results, index = worst
+    print_hand("Worst", index, hand[0], hand[1], *results)
     i += 1
     
 
