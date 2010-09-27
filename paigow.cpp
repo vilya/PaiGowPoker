@@ -20,8 +20,8 @@ public:
   ~Combinations();
 
   bool next();
+  const unsigned int* current() const;
 
-private:
   void print() const;
 
 private:
@@ -73,7 +73,6 @@ Combinations::Combinations(unsigned int total, unsigned int num) :
 
   for (unsigned int i = 0; i < _kNum; ++i)
     _combination[i] = i;
-  print();
 }
 
 
@@ -99,8 +98,13 @@ bool Combinations::next()
     ++i;
   }
 
-  print();
   return true;
+}
+
+
+const unsigned int* Combinations::current() const
+{
+  return _combination;
 }
 
 
@@ -213,6 +217,22 @@ void PrintGames(const std::vector<Game>& games)
     printf("Player:");
     PrintHand(g->playerCards);
     printf("\n");
+
+    Combinations combo(g->playerCards.size(), 2);
+    do {
+      const unsigned int* indexes = combo.current();
+      PrintCard(g->playerCards[indexes[0]]);
+      printf(" ");
+      PrintCard(g->playerCards[indexes[1]]);
+      printf(" |");
+      for (unsigned int i = 0; i < g->playerCards.size(); ++i) {
+        if (i != indexes[0] && i != indexes[1]) {
+          printf(" ");
+          PrintCard(g->playerCards[i]);
+        }
+      }
+      printf("\n");
+    } while (combo.next());
     printf("Dealer:");
     PrintHand(g->dealerCards);
     printf("\n");
@@ -223,18 +243,6 @@ void PrintGames(const std::vector<Game>& games)
 
 int main(int argc, char** argv)
 {
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <n> <k>\n", argv[0]);
-    return -1;
-  }
-  unsigned int total = (unsigned int)atoi(argv[1]);
-  unsigned int numToChoose = (unsigned int)atoi(argv[2]);
-
-  Combinations combo(total, numToChoose);
-  while (combo.next())
-    ;
-
-  /*
   if (argc != 2) {
     fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
     return -1;
@@ -257,7 +265,6 @@ int main(int argc, char** argv)
 
   // Print the results.
   PrintGames(games);
-  */
 
   return 0;
 }
