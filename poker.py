@@ -49,7 +49,7 @@ def hand_value(hand):
       largest_group = count
     i = j
 
-  counts = sorted(counts, key=lambda x: x[1] * 10 + x[0], reverse=True)
+  counts = sorted(counts, key=lambda x: x[1] * 15 + x[0], reverse=True)
 
   score = 0
   for val, count in counts:
