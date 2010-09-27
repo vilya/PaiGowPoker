@@ -37,6 +37,8 @@ struct Card
 {
   unsigned int value;
   unsigned int suit;
+
+  bool operator < (const Card& that) const { return value < that.value; }
 };
 
 
@@ -54,6 +56,9 @@ struct Game
 Card ParseCard(const char* card);
 std::vector<Card> ParseHand(char* line);
 std::vector<Game> ParseGames(FILE* f);
+
+unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
+unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo);
 
 void PrintCard(const Card& card);
 void PrintHand(const std::vector<Card>& cards);
@@ -177,6 +182,115 @@ std::vector<Game> ParseGames(FILE* f)
 }
 
 
+bool CompareCardsDescending(const Card& a, const Card& b)
+{
+  return a.value > b.value;
+}
+
+
+bool CompareCountsDescending(const std::pair<unsigned int, unsigned int>& a,
+                             const std::pair<unsigned int, unsigned int>& b)
+{
+  return (a.second > b.second) || (a.second == b.second && a.first > b.first);
+}
+
+
+unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo)
+{
+  const Card& a = cards[combo.current()[0]];
+  const Card& b = cards[combo.current()[1]];
+
+  unsigned int score = (a.value >= b.value) ?
+    (a.value * 15 + b.value) : (b.value * 15 + a.value);
+  if (a.value == b.value)
+    score += 1000;
+  return score;
+}
+
+
+unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo)
+{
+  // This function assumes that there are 7 cards in the cards vector and that
+  // the combo describes the low hand, i.e. the two cards which AREN'T in this
+  // hand.
+
+  // Get the current hand.
+  Card hand[5];
+  unsigned int index = 0;
+  for (unsigned int i = 0; i < cards.size(); ++i) {
+    if (i != combo.current()[0] && i != combo.current()[1])
+      hand[index++] = cards[i];
+  }
+  std::sort(hand, hand + 5, CompareCardsDescending);
+
+  // Analyse the hand, looking for the number of groups, the largest group and the sizes of each group.
+  unsigned int largestGroup = 0;
+  std::vector< std::pair<unsigned int, unsigned int> > counts;
+  counts.reserve(5);
+  index = 0;
+  while (index < 5) {
+    unsigned int j = index + 1;
+    while (j < 5 && hand[index].value == hand[j].value)
+      ++j;
+
+    counts.push_back(std::make_pair(hand[index].value, j - index));
+    if (counts[index].second > largestGroup)
+      largestGroup = counts[index].second;
+
+    index = j;
+  }
+  std::sort(counts.begin(), counts.end(), CompareCountsDescending);
+
+  // Calculate a base score for the hand using the sorted groups of cards.
+  unsigned int score = 0;
+  for (unsigned int i = 0; i < counts.size(); ++i)
+    score = score * 15 + counts[i].first;
+
+  // Categorise the hand and adjust the score to account for the category.
+  bool isStraight = true;
+  bool isFlush = true;
+  switch (counts.size()) {
+    case 5:
+      for (unsigned int i = 1; i < 5 && isStraight; ++i)
+        isStraight = (hand[i].value + i) == hand[0].value;
+      for (unsigned int i = 1; i < 5 && isFlush; ++i)
+        isFlush = hand[i].suit == hand[0].suit;
+
+      if (isStraight && isFlush)
+        score += 8000000; // Straight flush
+      else if (isFlush)
+        score += 5000000; // Flush
+      else if (isStraight)
+        score += 4000000; // Straight
+
+      break;
+
+    case 4:
+      score += 1000000; // One pair
+      break;
+
+    case 3:
+      if (largestGroup == 3)
+        score += 3000000; // Three of a kind
+      else
+        score += 2000000; // Two pairs
+      break;
+
+    case 2:
+      if (largestGroup == 4)
+        score += 7000000; // Four of a kind
+      else
+        score += 6000000; // Full house
+      break;
+
+    default:
+      return 0; // This should be impossible.
+  }
+
+  return score;
+}
+
+
 void PrintCard(const Card& card)
 {
   char value;
@@ -231,7 +345,7 @@ void PrintGames(const std::vector<Game>& games)
           PrintCard(g->playerCards[i]);
         }
       }
-      printf("\n");
+      printf("\tScore: %4u, %7u\n", ScoreLowHand(g->playerCards, combo), ScoreHighHand(g->playerCards, combo));
     } while (combo.next());
     printf("Dealer:");
     PrintHand(g->dealerCards);
@@ -259,6 +373,8 @@ int main(int argc, char** argv)
   }
   std::vector<Game> games = ParseGames(f);
   fclose(f);
+
+
 
   // Stop timing.
   tbb::tick_count endTime = tbb::tick_count::now();
