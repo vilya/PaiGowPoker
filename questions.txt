@@ -8,19 +8,3 @@
   -> If I/O time is included, memory mapping is probably going to be the
      fastest solution...
 
-- How do they get the figures for the number of dealer hands, in the example?
-  In hand #1, the dealer has 10 cards implying the number of possible hands is
-
-    (10 choose 5) * (5 choose 2)
-    = 10! / (5! * 5!)  *  5! / (3! * 2!)
-    = (10 * 9 * 8 * 7 * 6) / (5 * 4 * 3 * 2 * 1)  *  (5 * 4) / (2 * 1)
-    = (30240 / 120) * (20 / 2)
-    = 252 * 10
-    = 2520
-
-  But in the example the dealer only seems to have 120 hands...?
-
-  Actually, I've just noticed that my figures for number of dealer hands are
-  exactly 21 times theirs in both cases. Which makes me suspect either they or
-  I are consistently making the same error.
-
