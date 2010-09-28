@@ -13,5 +13,5 @@ paigow: paigow.cpp
 
 
 clean:
-	rm -f hailstone *.o
+	rm -f paigow *.o
 
