@@ -99,6 +99,7 @@ def evaluate_hands(my_cards, their_cards):
   my_hands = tuple(all_hands(my_cards))
   my_scores = tuple([ (small_hand_value(low), hand_value(high)) for low, high in my_hands ])
 
+  '''
   low_scores = sorted(list(set([low for low, _ in my_scores])), reverse=True)
   print "%2d low hand scores:" % len(low_scores), low_scores
   high_scores = sorted(list(set([high for _, high in my_scores])), reverse=True)
@@ -111,6 +112,7 @@ def evaluate_hands(my_cards, their_cards):
     print "Hand #%2d:\t%s %s | %s %s %s %s %s\t\tScore: %4d (#%2d), %9d (#%2d)" % (i,
         low_hand[0], low_hand[1], high_hand[0], high_hand[1], high_hand[2], high_hand[3], high_hand[4],
         low_score, low_score_rank, high_score, high_score_rank)
+  '''
 
   their_scores = tuple([ (small_hand_value(low), hand_value(high)) for low, high in all_hands(their_cards) ])
 
@@ -151,9 +153,14 @@ def evaluate_hands(my_cards, their_cards):
 
 
 def print_hand(title, index, low_hand, high_hand, wins, draws, losses):
+  '''
   print "%s:\t%s %s | %s %s %s %s %s\t\tW: %9d  D: %9d  L: %9d\t(Hand #%d)" % (title,
       low_hand[0], low_hand[1], high_hand[0], high_hand[1], high_hand[2],
       high_hand[3], high_hand[4], wins, draws, losses, index)
+  '''
+  print "%s:\t%s %s | %s %s %s %s %s\t\tW: %9d  D: %9d  L: %9d" % (title,
+      low_hand[0], low_hand[1], high_hand[0], high_hand[1], high_hand[2],
+      high_hand[3], high_hand[4], wins, draws, losses)
 
 
 def main():
