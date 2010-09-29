@@ -142,19 +142,19 @@ Card ParseCard(const char* card)
 {
   Card c;
   switch (card[0]) {
-    case '2': c.value =  2; break;
-    case '3': c.value =  3; break;
-    case '4': c.value =  4; break;
-    case '5': c.value =  5; break;
-    case '6': c.value =  6; break;
-    case '7': c.value =  7; break;
-    case '8': c.value =  8; break;
-    case '9': c.value =  9; break;
-    case 'X': c.value = 10; break;
-    case 'J': c.value = 11; break;
-    case 'Q': c.value = 12; break;
-    case 'K': c.value = 13; break;
-    case 'A': c.value = 14; break;
+    case '2': c.value =  0; break;
+    case '3': c.value =  1; break;
+    case '4': c.value =  2; break;
+    case '5': c.value =  3; break;
+    case '6': c.value =  4; break;
+    case '7': c.value =  5; break;
+    case '8': c.value =  6; break;
+    case '9': c.value =  7; break;
+    case 'X': c.value =  8; break;
+    case 'J': c.value =  9; break;
+    case 'Q': c.value = 10; break;
+    case 'K': c.value = 11; break;
+    case 'A': c.value = 12; break;
     default: c.value = 0; break;
   }
   switch (card[1]) {
@@ -256,7 +256,7 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
       unsigned int pairs = (suits[0] & suits[1]) | (suits[0] & suits[2]) | (suits[0] & suits[3])
         | (suits[1] & suits[2]) | (suits[1] & suits[3]) | (suits[2] & suits[3]);
       groups &= ~pairs;
-      return 1000000 + (__builtin_ctz(pairs) << 14) + groups; // One pair.
+      return 1000000 + (__builtin_ctz(pairs) << 13) + groups; // One pair.
     }
 
     case 3:
@@ -267,7 +267,7 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
       if (__builtin_popcount(pairs) > 1) // Two pairs.
         return 2000000 + ((32 - __builtin_clz(pairs)) << 8) + (__builtin_ctz(pairs) << 4) + __builtin_ctz(groups);
       else // Three of a kind
-        return 3000000 + (__builtin_ctz(pairs) << 14) + groups;
+        return 3000000 + (__builtin_ctz(pairs) << 13) + groups;
     }
 
     case 2:
@@ -339,7 +339,7 @@ void PlayGame(Game& game)
 
 void PrintCard(const Card& card)
 {
-  const char* values = "0123456789XJQKA";
+  const char* values = "23456789XJQKA";
   const char* suits = "CDHS";
 
   printf("%c%c", values[card.value], suits[card.suit]);
