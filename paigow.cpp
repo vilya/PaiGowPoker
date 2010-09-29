@@ -74,9 +74,6 @@ Card ParseCard(const char* card);
 std::vector<Card> ParseHand(char* line);
 std::vector<Game> ParseGames(FILE* f);
 
-bool CompareCardsDescending(const Card& a, const Card& b);
-bool CompareCountsDescending(const std::pair<unsigned int, unsigned int>& a,
-                             const std::pair<unsigned int, unsigned int>& b);
 bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b);
 
 unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
@@ -200,19 +197,6 @@ std::vector<Game> ParseGames(FILE* f)
     games.push_back(game);
   }
   return games;
-}
-
-
-bool CompareCardsDescending(const Card& a, const Card& b)
-{
-  return a.value > b.value;
-}
-
-
-bool CompareCountsDescending(const std::pair<unsigned int, unsigned int>& a,
-                             const std::pair<unsigned int, unsigned int>& b)
-{
-  return (a.second > b.second) || (a.second == b.second && a.first > b.first);
 }
 
 
