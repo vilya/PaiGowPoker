@@ -8,8 +8,6 @@ General
   21 of them. Compare each dealer hand to all 21 at once, so that we never have
   to store or recalculate a dealer hand.
 
-- Skip any hand that has a lower score than the current one?
-
 - Given a deck of 52 cards, the dealer has at most 45 cards to choose from.
   (45 choose 5) * (40 choose 2) == 952972020, which will fit in 30 bits, so use
   unsigned ints for the results.
@@ -17,23 +15,34 @@ General
 - There ought to be a more direct way to calculate the number of
   wins/draws/losses than iterating through them all.
 
-- If ranking is only based on wins, just calculate the number of wins?
-
 - Score calculation needs to be as fast as possible.
   - Represent each hand as a bitset per suit
   - If any suit contains 5 bits, we've got a flush.
   - If we OR all the suits together, then:
     - 5 consecutive bits means we've got a straight.
-    - The total number of set bits is the number of groups
+    - The total number of set bits is the number of groups.
     - The bit positions indicate the card value of each group.
-
   - Can check for pairs by AND-ing all combos of 2 suits together:
     (clubs & diamonds) | (clubs & hearts) | (clubs & spades) |
     (diamonds & hearts) | (diamonds & spades) |
     (hearts & spades)
+  - Can check for three of a kind by AND-ing all combos of 3 suits together.
+  - Can check for four of a kind by AND-ing all suits together.
 
 - Need to be able to calculate the nth combination directly, as well as
   iteratively.
+
+
+Of dubious benefit
+------------------
+
+- Skip any hand that has a lower score than the current one?
+  - Need to be able to predict fairly accurately which hands will be best/2nd
+    best/worst, which is hard to do.
+
+- If ranking is only based on wins, just calculate the number of wins?
+  - Not sure whether this would save us anything. We still need to calculate
+    the results for each possible hand to figure out how many wins there are.
 
 
 Parallelisation
