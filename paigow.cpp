@@ -22,8 +22,6 @@ public:
   bool next();
   const unsigned int* current() const;
 
-  void print() const;
-
 private:
   const unsigned int _kTotal;
   const unsigned int _kNum;
@@ -83,10 +81,12 @@ bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b);
 
 unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
 unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo);
+void PlayGame(Game& game);
 
 void PrintCard(const Card& card);
 void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHand& hand);
-void PrintGames(const std::vector<Game>& games);
+void PrintGames(const std::vector<Game>& games,
+    const tbb::tick_count& startTime, const tbb::tick_count& endTime);
 
 
 //
@@ -134,15 +134,6 @@ bool Combinations::next()
 const unsigned int* Combinations::current() const
 {
   return _combination;
-}
-
-
-void Combinations::print() const
-{
-  printf("%3u", _combination[0]);
-  for (unsigned int pos = 1; pos < _kNum; ++pos)
-    printf(" %3u", _combination[pos]);
-  printf("\n");
 }
 
 
@@ -321,6 +312,51 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
 }
 
 
+void PlayGame(Game& game)
+{
+  // Calculate the scores for all possible player hands.
+  Combinations playerCombos(game.playerCards.size(), 2);
+  std::vector<PlayerHand> playerHands(21);
+  unsigned int i = 0;
+  do {
+    playerHands[i].index = i;
+    playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
+    playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
+    ++i;
+  } while (playerCombos.next());
+
+  // For each possible dealer hand, play each possible player hand against it and record the results.
+  std::vector<Card> tmpDealerHand(7);
+  Combinations dealerCombos(game.dealerCards.size(), 7);
+  do {
+    for (unsigned int i = 0; i < 7; ++i)
+      tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
+    
+    Combinations dealerHandCombos(tmpDealerHand.size(), 2);
+    do {
+      unsigned int dealerLowScore = ScoreLowHand(tmpDealerHand, dealerHandCombos);
+      unsigned int dealerHighScore = ScoreHighHand(tmpDealerHand, dealerHandCombos);
+      for (unsigned int i = 0; i < playerHands.size(); ++i) {
+        unsigned int playerLowScore = playerHands[i].lowHandScore;
+        unsigned int playerHighScore = playerHands[i].highHandScore;
+        if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore)
+          ++playerHands[i].wins;
+        else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore)
+          ++playerHands[i].losses;
+        else
+          ++playerHands[i].draws;
+      }
+    } while (dealerHandCombos.next());
+  } while (dealerCombos.next());
+
+  // Find the player hands with the best, second best and worst results.
+  std::sort(playerHands.begin(), playerHands.end(), ComparePlayerHandsDescending);
+  game.best = playerHands[0];
+  game.secondBest = playerHands[1];
+  game.worst = playerHands.back();
+}
+
+
 void PrintCard(const Card& card)
 {
   char value;
@@ -366,7 +402,8 @@ void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHa
 }
 
 
-void PrintGames(const std::vector<Game>& games)
+void PrintGames(const std::vector<Game>& games,
+    const tbb::tick_count& startTime, const tbb::tick_count& endTime)
 {
   for (unsigned int gameNum = 0; gameNum < games.size(); ++gameNum) {
     const Game& g = games[gameNum];
@@ -377,6 +414,7 @@ void PrintGames(const std::vector<Game>& games)
     PrintHand("2nd", g.playerCards, g.secondBest);
     PrintHand("Worst", g.playerCards, g.worst);
   }
+  fprintf(stderr, "\nPlay completed in %6.4f seconds.\n", (endTime - startTime).seconds());
 }
 
 
@@ -401,54 +439,14 @@ int main(int argc, char** argv)
 
   // For each game
   std::vector<Game>::iterator g;
-  std::vector<Card> tmpDealerHand(7);
-  for (g = games.begin(); g != games.end(); ++g) {
-    // Calculate the scores for all possible player hands.
-    Combinations playerCombos(g->playerCards.size(), 2);
-    std::vector<PlayerHand> playerHands(21);
-    unsigned int i = 0;
-    do {
-      playerHands[i].index = i;
-      playerHands[i].lowHandScore = ScoreLowHand(g->playerCards, playerCombos);
-      playerHands[i].highHandScore = ScoreHighHand(g->playerCards, playerCombos);
-      ++i;
-    } while (playerCombos.next());
-
-    // For each possible dealer hand, play each possible player hand against it and record the results.
-    Combinations dealerCombos(g->dealerCards.size(), 7);
-    do {
-      for (unsigned int i = 0; i < 7; ++i)
-        tmpDealerHand[i] = g->dealerCards[dealerCombos.current()[i]];
-      
-      Combinations dealerHandCombos(tmpDealerHand.size(), 2);
-      do {
-        unsigned int dealerLowScore = ScoreLowHand(tmpDealerHand, dealerHandCombos);
-        unsigned int dealerHighScore = ScoreHighHand(tmpDealerHand, dealerHandCombos);
-        for (unsigned int i = 0; i < playerHands.size(); ++i) {
-          unsigned int playerLowScore = playerHands[i].lowHandScore;
-          unsigned int playerHighScore = playerHands[i].highHandScore;
-          if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore)
-            ++playerHands[i].wins;
-          else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore)
-            ++playerHands[i].losses;
-          else
-            ++playerHands[i].draws;
-        }
-      } while (dealerHandCombos.next());
-    } while (dealerCombos.next());
-
-    // Find the player hands with the best, second best and worst results.
-    std::sort(playerHands.begin(), playerHands.end(), ComparePlayerHandsDescending);
-    g->best = playerHands[0];
-    g->secondBest = playerHands[1];
-    g->worst = playerHands.back();
-  }
+  for (g = games.begin(); g != games.end(); ++g)
+    PlayGame(*g);
 
   // Stop timing.
   tbb::tick_count endTime = tbb::tick_count::now();
 
   // Print the results.
-  PrintGames(games);
+  PrintGames(games, startTime, endTime);
 
   return 0;
 }
