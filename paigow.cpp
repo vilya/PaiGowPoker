@@ -212,7 +212,7 @@ unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& co
   const Card& b = cards[combo.current()[1]];
 
   unsigned int score = (a.value >= b.value) ?
-    (a.value * 15 + b.value) : (b.value * 15 + a.value);
+    (a.value * 13 + b.value) : (b.value * 13 + a.value);
   if (a.value == b.value)
     score += 1000;
   return score;
