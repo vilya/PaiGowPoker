@@ -160,7 +160,13 @@ Card ParseCard(const char* card)
     case 'A': c.value = 14; break;
     default: c.value = 0; break;
   }
-  c.suit = card[1];
+  switch (card[1]) {
+    case 'C': c.suit = 0; break;
+    case 'D': c.suit = 1; break;
+    case 'H': c.suit = 2; break;
+    case 'S': c.suit = 3; break;
+    default: c.suit = 0; break;
+  }
   return c;
 }
 
@@ -236,79 +242,66 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
   // hand.
 
   // Get the current hand.
-  Card hand[5];
-  unsigned int index = 0;
+  unsigned int suits[4] = { 0, 0, 0, 0 };
   for (unsigned int i = 0; i < cards.size(); ++i) {
     if (i != combo.current()[0] && i != combo.current()[1])
-      hand[index++] = cards[i];
+      suits[cards[i].suit] |= (1 << cards[i].value);
   }
-  std::sort(hand, hand + 5, CompareCardsDescending);
 
-  // Analyse the hand, looking for the number of groups, the largest group and the sizes of each group.
-  unsigned int largestGroup = 0;
-  std::vector< std::pair<unsigned int, unsigned int> > counts;
-  counts.reserve(5);
-  index = 0;
-  while (index < 5) {
-    unsigned int j = index + 1;
-    while (j < 5 && hand[index].value == hand[j].value)
-      ++j;
+  unsigned int groups = suits[0] | suits[1] | suits[2] | suits[3];
+  unsigned int numGroups = __builtin_popcount(groups);
 
-    counts.push_back(std::make_pair(hand[index].value, j - index));
-    if (counts[index].second > largestGroup)
-      largestGroup = counts[index].second;
-
-    index = j;
-  }
-  std::sort(counts.begin(), counts.end(), CompareCountsDescending);
-
-  // Calculate a base score for the hand using the sorted groups of cards.
-  unsigned int score = 0;
-  for (unsigned int i = 0; i < counts.size(); ++i)
-    score = score * 15 + counts[i].first;
-
-  // Categorise the hand and adjust the score to account for the category.
-  bool isStraight = true;
-  bool isFlush = true;
-  switch (counts.size()) {
+  switch (numGroups) {
     case 5:
-      for (unsigned int i = 1; i < 5 && isStraight; ++i)
-        isStraight = (hand[i].value + i) == hand[0].value;
-      for (unsigned int i = 1; i < 5 && isFlush; ++i)
-        isFlush = hand[i].suit == hand[0].suit;
-
-      if (isStraight && isFlush)
-        score += 8000000; // Straight flush
-      else if (isFlush)
-        score += 5000000; // Flush
-      else if (isStraight)
-        score += 4000000; // Straight
-
-      break;
+    {
+      bool is_flush = (__builtin_popcount(suits[0]) == 5) || (__builtin_popcount(suits[1]) == 5)
+        || (__builtin_popcount(suits[2]) == 5) || (__builtin_popcount(suits[3]) == 5);
+      bool is_straight = __builtin_ctz(groups) + __builtin_clz(groups) == 27;
+      if (is_flush && is_straight)
+        return 8000000 + groups;  // Straight flush
+      else if (is_flush)
+        return 5000000 + groups;  // Flush
+      else if (is_straight)
+        return 4000000 + groups;  // Straight
+      else
+        return groups;            // Nothing.
+    }
 
     case 4:
-      score += 1000000; // One pair
-      break;
+    {
+      unsigned int pairs = (suits[0] & suits[1]) | (suits[0] & suits[2]) | (suits[0] & suits[3])
+        | (suits[1] & suits[2]) | (suits[1] & suits[3]) | (suits[2] & suits[3]);
+      groups &= ~pairs;
+      return 1000000 + (__builtin_ctz(pairs) << 14) + groups; // One pair.
+    }
 
     case 3:
-      if (largestGroup == 3)
-        score += 3000000; // Three of a kind
-      else
-        score += 2000000; // Two pairs
-      break;
+    {
+      unsigned int pairs = (suits[0] & suits[1]) | (suits[0] & suits[2]) | (suits[0] & suits[3])
+        | (suits[1] & suits[2]) | (suits[1] & suits[3]) | (suits[2] & suits[3]);
+      groups &= ~pairs;
+      if (__builtin_popcount(pairs) > 1) // Two pairs.
+        return 2000000 + ((32 - __builtin_clz(pairs)) << 8) + (__builtin_ctz(pairs) << 4) + __builtin_ctz(groups);
+      else // Three of a kind
+        return 3000000 + (__builtin_ctz(pairs) << 14) + groups;
+    }
 
     case 2:
-      if (largestGroup == 4)
-        score += 7000000; // Four of a kind
-      else
-        score += 6000000; // Full house
-      break;
+    {
+      unsigned int four = (suits[0] & suits[1] & suits[2] & suits[3]);
+      groups &= ~four;
+      if (four != 0)
+        return 7000000 + (__builtin_ctz(four) << 4) + __builtin_ctz(groups); // Four of a kind
+
+      unsigned int three = (suits[0] & suits[1] & suits[2]) | (suits[0] & suits[1] & suits[3])
+        | (suits[0] & suits[2] & suits[3]) | (suits[1] & suits[2] & suits[3]);
+      groups &= ~three;
+      return 6000000 + (__builtin_ctz(three) << 4) + __builtin_ctz(groups); // Full house
+    }
 
     default:
-      return 0; // This should be impossible.
+      return 0; // Should be impossible.
   }
-
-  return score;
 }
 
 
@@ -362,24 +355,10 @@ void PlayGame(Game& game)
 
 void PrintCard(const Card& card)
 {
-  char value;
-  switch (card.value) {
-    case  2: value = '2'; break;
-    case  3: value = '3'; break;
-    case  4: value = '4'; break;
-    case  5: value = '5'; break;
-    case  6: value = '6'; break;
-    case  7: value = '7'; break;
-    case  8: value = '8'; break;
-    case  9: value = '9'; break;
-    case 10: value = 'X'; break;
-    case 11: value = 'J'; break;
-    case 12: value = 'Q'; break;
-    case 13: value = 'K'; break;
-    case 14: value = 'A'; break;
-    default: value = '_'; break;
-  }
-  printf("%c%c", value, card.suit);
+  const char* values = "0123456789XJQKA";
+  const char* suits = "CDHS";
+
+  printf("%c%c", values[card.value], suits[card.suit]);
 }
 
 
