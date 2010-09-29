@@ -49,7 +49,7 @@ struct PlayerHand
   unsigned int draws;
   unsigned int losses;
 
-  PlayerHand() : index(0), wins(0), draws(0), losses(0) {}
+  PlayerHand() : index(0), lowHandScore(0), highHandScore(0), wins(0), draws(0), losses(0) {}
 };
 
 
@@ -314,9 +314,11 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
 
 void PlayGame(Game& game)
 {
+  // We assume that the player always has 7 cards.
+
   // Calculate the scores for all possible player hands.
-  Combinations playerCombos(game.playerCards.size(), 2);
-  std::vector<PlayerHand> playerHands(21);
+  Combinations playerCombos(7, 2);
+  PlayerHand playerHands[21];
   unsigned int i = 0;
   do {
     playerHands[i].index = i;
@@ -325,6 +327,7 @@ void PlayGame(Game& game)
     ++i;
   } while (playerCombos.next());
 
+
   // For each possible dealer hand, play each possible player hand against it and record the results.
   std::vector<Card> tmpDealerHand(7);
   Combinations dealerCombos(game.dealerCards.size(), 7);
@@ -332,11 +335,11 @@ void PlayGame(Game& game)
     for (unsigned int i = 0; i < 7; ++i)
       tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
     
-    Combinations dealerHandCombos(tmpDealerHand.size(), 2);
+    Combinations dealerHandCombos(7, 2);
     do {
       unsigned int dealerLowScore = ScoreLowHand(tmpDealerHand, dealerHandCombos);
       unsigned int dealerHighScore = ScoreHighHand(tmpDealerHand, dealerHandCombos);
-      for (unsigned int i = 0; i < playerHands.size(); ++i) {
+      for (unsigned int i = 0; i < 21; ++i) {
         unsigned int playerLowScore = playerHands[i].lowHandScore;
         unsigned int playerHighScore = playerHands[i].highHandScore;
         if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore)
@@ -350,10 +353,10 @@ void PlayGame(Game& game)
   } while (dealerCombos.next());
 
   // Find the player hands with the best, second best and worst results.
-  std::sort(playerHands.begin(), playerHands.end(), ComparePlayerHandsDescending);
+  std::sort(playerHands, playerHands + 21, ComparePlayerHandsDescending);
   game.best = playerHands[0];
   game.secondBest = playerHands[1];
-  game.worst = playerHands.back();
+  game.worst = playerHands[20];
 }
 
 
