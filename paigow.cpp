@@ -171,15 +171,15 @@ const unsigned int* Combinations::current() const
 
 unsigned int Choose(unsigned int n, unsigned int k)
 {
-  unsigned int top = 1;
-  for (unsigned int val = n - k + 1; val <= n; ++val)
+  size_t top = 1;
+  for (size_t val = n - k + 1; val <= n; ++val)
     top *= val;
 
-  unsigned int bottom = 1;
-  for (unsigned int val = 2; val <= k; ++val)
+  size_t bottom = 1;
+  for (size_t val = 2; val <= k; ++val)
     bottom *= val;
 
-  return top / bottom;
+  return (unsigned int)(top / bottom);
 }
 
 
@@ -430,6 +430,7 @@ void PrintGames(const std::vector<Game>& games,
 
 int main(int argc, char** argv)
 {
+  /*
   if (argc != 3) {
     fprintf(stderr, "Usage: %s <N> <K>\n", argv[0]);
     return -1;
@@ -443,6 +444,7 @@ int main(int argc, char** argv)
     fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
     return -1;
   }
+  */
 
   // Start timing.
   tbb::tick_count startTime = tbb::tick_count::now();
