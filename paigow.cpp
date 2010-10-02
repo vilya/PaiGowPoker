@@ -20,6 +20,8 @@ public:
   ~Combinations();
 
   bool next();
+  bool jumpTo(unsigned int n);
+
   const unsigned int* current() const;
 
 private:
@@ -69,6 +71,8 @@ struct Game
 //
 // Forward declarations
 //
+
+unsigned int Choose(unsigned int n, unsigned int k);
 
 Card ParseCard(const char* card);
 std::vector<Card> ParseHand(char* line);
@@ -128,6 +132,33 @@ bool Combinations::next()
 }
 
 
+bool Combinations::jumpTo(unsigned int i)
+{
+  const unsigned int kNumCombos = Choose(_kTotal, _kNum);
+  if (i >= kNumCombos)
+    return false;
+
+  unsigned int a = _kTotal;
+  unsigned int b = _kNum;
+  unsigned int x = kNumCombos - i - 1;
+
+  for (unsigned int index = 0; index < _kNum; ++index) {
+    unsigned int v = a;
+    while (Choose(v, b) > x)
+      --v;
+    _combination[index] = v;
+    x -= Choose(v, b);
+    a = v;
+    --b;
+  }
+
+  for (unsigned int index = 0; index < _kNum; ++index)
+    _combination[index] = (_kTotal - 1) - _combination[index];
+
+  return true;
+}
+
+
 const unsigned int* Combinations::current() const
 {
   return _combination;
@@ -137,6 +168,20 @@ const unsigned int* Combinations::current() const
 //
 // Functions
 //
+
+unsigned int Choose(unsigned int n, unsigned int k)
+{
+  unsigned int top = 1;
+  for (unsigned int val = n - k + 1; val <= n; ++val)
+    top *= val;
+
+  unsigned int bottom = 1;
+  for (unsigned int val = 2; val <= k; ++val)
+    bottom *= val;
+
+  return top / bottom;
+}
+
 
 Card ParseCard(const char* card)
 {
@@ -349,8 +394,7 @@ void PrintCard(const Card& card)
 void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHand& hand)
 {
   Combinations combo(cards.size(), 2);
-  for (unsigned int i = 0; i < hand.index; ++i)
-    combo.next();
+  combo.jumpTo(hand.index);
 
   printf("%s:\t", title);
   const unsigned int* indexes = combo.current();
@@ -386,6 +430,15 @@ void PrintGames(const std::vector<Game>& games,
 
 int main(int argc, char** argv)
 {
+  if (argc != 3) {
+    fprintf(stderr, "Usage: %s <N> <K>\n", argv[0]);
+    return -1;
+  }
+  unsigned int n = (unsigned int)atol(argv[1]);
+  unsigned int k = (unsigned int)atol(argv[2]);
+  printf("%u choose %u = %u\n", n, k, Choose(n, k));
+  return 0;
+
   if (argc != 2) {
     fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
     return -1;
