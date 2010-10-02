@@ -430,22 +430,6 @@ void PrintGames(const std::vector<Game>& games,
 
 int main(int argc, char** argv)
 {
-  /*
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <N> <K>\n", argv[0]);
-    return -1;
-  }
-  unsigned int n = (unsigned int)atol(argv[1]);
-  unsigned int k = (unsigned int)atol(argv[2]);
-  printf("%u choose %u = %u\n", n, k, Choose(n, k));
-  return 0;
-
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
-    return -1;
-  }
-  */
-
   // Start timing.
   tbb::tick_count startTime = tbb::tick_count::now();
   
