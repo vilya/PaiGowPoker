@@ -1,0 +1,4 @@
+Hand #1
+Best:	XC JC | QC KC AC AD AS		W:        21  D:         0  L:         0
+2nd:	XC QC | JC KC AC AD AS		W:        21  D:         0  L:         0
+Worst:	AD AS | XC JC QC KC AC		W:        21  D:         0  L:         0

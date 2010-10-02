@@ -1,0 +1,8 @@
+Hand #1
+Best:	6H QC | JD 5S 3D JS 2C		W:      1432  D:      1052  L:        36
+2nd:	5S QC | 6H JD 3D JS 2C		W:      1432  D:      1052  L:        36
+Worst:	3D 2C | 6H JD 5S QC JS		W:         0  D:      2460  L:        60
+Hand #2
+Best:	AH KD | 9C 9D 6H 7S 7D		W:    123749  D:     11180  L:       206
+2nd:	9C 9D | 6H 7S AH 7D KD		W:    105262  D:     29497  L:       376
+Worst:	6H 7D | 9C 9D 7S AH KD		W:     12334  D:    100063  L:     22738

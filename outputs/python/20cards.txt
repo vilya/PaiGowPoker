@@ -1,0 +1,4 @@
+Hand #1
+Best:	QC AC | 5H 9D 5D 9H 4C		W:   1300398  D:    313206  L:     14316
+2nd:	AC 4C | 5H QC 9D 5D 9H		W:   1300398  D:    313206  L:     14316
+Worst:	5D 4C | 5H QC 9D AC 9H		W:     82028  D:   1078619  L:    467273
