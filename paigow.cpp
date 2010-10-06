@@ -51,7 +51,11 @@ struct PlayerHand
   unsigned int draws;
   unsigned int losses;
 
-  PlayerHand() : index(0), lowHandScore(0), highHandScore(0), wins(0), draws(0), losses(0) {}
+  unsigned int* combination;
+
+  PlayerHand() : index(0), lowHandScore(0), highHandScore(0), wins(0), draws(0), losses(0),
+      combination(NULL)
+  {}
 };
 
 
@@ -78,6 +82,7 @@ Card ParseCard(const char* card);
 std::vector<Card> ParseHand(char* line);
 std::vector<Game> ParseGames(FILE* f);
 
+bool CompareCardsDescending(const Card& a, const Card& b);
 bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b);
 
 unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
@@ -223,6 +228,7 @@ std::vector<Card> ParseHand(char* line)
   for (const char* card = line; *card != '\0'; card += 2)
     cards.push_back(ParseCard(card));
 
+  std::sort(cards.begin(), cards.end(), CompareCardsDescending);
   return cards;
 }
 
@@ -242,6 +248,12 @@ std::vector<Game> ParseGames(FILE* f)
     games.push_back(game);
   }
   return games;
+}
+
+
+bool CompareCardsDescending(const Card& a, const Card& b)
+{
+  return (a.value > b.value) || (a.value == b.value && a.suit > b.suit);
 }
 
 
@@ -334,6 +346,36 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
 }
 
 
+void DebugPrintHand(const std::vector<Card>& cards,
+                    const unsigned int* indexes)
+{
+  PrintCard(cards[indexes[0]]);
+  printf(" ");
+  PrintCard(cards[indexes[1]]);
+  printf(" |");
+  for (unsigned int i = 0; i < cards.size(); ++i) {
+    if (i != indexes[0] && i != indexes[1]) {
+      printf(" ");
+      PrintCard(cards[i]);
+    }
+  }
+}
+
+
+void DebugPrintPlayerVsDealer(const std::vector<Card>& playerCards,
+                              const unsigned int* playerCombo,
+                              const std::vector<Card>& dealerCards,
+                              const unsigned int* dealerCombo,
+                              const char* result)
+{
+  printf("P: ");
+  DebugPrintHand(playerCards, playerCombo);
+  printf("\tD: ");
+  DebugPrintHand(dealerCards, dealerCombo);
+  printf("\t%s\n", result);
+}
+
+
 void PlayGame(Game& game)
 {
   // We assume that the player always has 7 cards.
@@ -346,9 +388,13 @@ void PlayGame(Game& game)
     playerHands[i].index = i;
     playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
     playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
+
+    playerHands[i].combination = new unsigned int[2];
+    playerHands[i].combination[0] = playerCombos.current()[0];
+    playerHands[i].combination[1] = playerCombos.current()[1];
+
     ++i;
   } while (playerCombos.next());
-
 
   // For each possible dealer hand, play each possible player hand against it and record the results.
   std::vector<Card> tmpDealerHand(7);
@@ -364,12 +410,18 @@ void PlayGame(Game& game)
       for (unsigned int i = 0; i < 21; ++i) {
         unsigned int playerLowScore = playerHands[i].lowHandScore;
         unsigned int playerHighScore = playerHands[i].highHandScore;
-        if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore)
+        if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore) {
           ++playerHands[i].wins;
-        else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore)
+          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "WIN");
+        }
+        else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore) {
           ++playerHands[i].losses;
-        else
+          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "LOSS");
+        }
+        else {
           ++playerHands[i].draws;
+          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "DRAW");
+        }
       }
     } while (dealerHandCombos.next());
   } while (dealerCombos.next());
@@ -451,7 +503,7 @@ int main(int argc, char** argv)
   tbb::tick_count endTime = tbb::tick_count::now();
 
   // Print the results.
-  PrintGames(games, startTime, endTime);
+  //PrintGames(games, startTime, endTime);
 
   return 0;
 }
