@@ -72,6 +72,21 @@ struct Game
 };
 
 
+struct GameReduce
+{
+  Game _game;
+  PlayerHand _playerHands[21];
+
+  GameReduce(const Game& game);
+  GameReduce(GameReduce& other, tbb::split);
+
+  void operator () (const tbb::blocked_range<unsigned int>& range);
+  void join(GameReduce& rhs);
+
+  void finish();
+};
+
+
 //
 // Forward declarations
 //
@@ -87,7 +102,14 @@ bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b);
 
 unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
 unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo);
-void PlayGame(Game& game);
+
+void DebugPrintHand(const std::vector<Card>& cards,
+                    const unsigned int* indexes);
+void DebugPrintPlayerVsDealer(const std::vector<Card>& playerCards,
+                              const unsigned int* playerCombo,
+                              const std::vector<Card>& dealerCards,
+                              const unsigned int* dealerCombo,
+                              const char* result);
 
 void PrintCard(const Card& card);
 void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHand& hand);
@@ -167,6 +189,104 @@ bool Combinations::jumpTo(unsigned int i)
 const unsigned int* Combinations::current() const
 {
   return _combination;
+}
+
+
+//
+// GameReduce methods
+//
+
+GameReduce::GameReduce(const Game& game) :
+  _game(game)
+{
+  // We assume that the player always has 7 cards.
+
+  // Calculate the scores for all possible player hands.
+  Combinations playerCombos(7, 2);
+  unsigned int i = 0;
+  do {
+    _playerHands[i].index = i;
+    _playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
+    _playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
+
+    _playerHands[i].combination = new unsigned int[2];
+    _playerHands[i].combination[0] = playerCombos.current()[0];
+    _playerHands[i].combination[1] = playerCombos.current()[1];
+
+    ++i;
+  } while (playerCombos.next());
+}
+
+
+GameReduce::GameReduce(GameReduce& other, tbb::split) :
+  _game(other._game)
+{
+  for (unsigned int i = 0; i < 21; ++i)
+    _playerHands[i] = other._playerHands[i];
+}
+
+
+void GameReduce::operator () (const tbb::blocked_range<unsigned int>& range)
+{
+  const Game& game = _game;
+
+  // For each possible dealer hand, play each possible player hand against it and record the results.
+  std::vector<Card> tmpDealerHand(7);
+  Combinations dealerCombos(game.dealerCards.size(), 7);
+
+  dealerCombos.jumpTo(range.begin());
+  for (unsigned int index = range.begin(); index < range.end(); ++index) {
+    for (unsigned int i = 0; i < 7; ++i)
+      tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
+    
+    Combinations dealerHandCombos(7, 2);
+    do {
+      unsigned int dealerLowScore = ScoreLowHand(tmpDealerHand, dealerHandCombos);
+      unsigned int dealerHighScore = ScoreHighHand(tmpDealerHand, dealerHandCombos);
+      for (unsigned int i = 0; i < 21; ++i) {
+        unsigned int playerLowScore = _playerHands[i].lowHandScore;
+        unsigned int playerHighScore = _playerHands[i].highHandScore;
+        if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore) {
+          ++_playerHands[i].wins;
+          DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "WIN");
+        }
+        else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore) {
+          ++_playerHands[i].losses;
+          DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "LOSS");
+        }
+        else {
+          ++_playerHands[i].draws;
+          DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "DRAW");
+        }
+      }
+    } while (dealerHandCombos.next());
+
+    dealerCombos.next();
+  }
+}
+
+
+void GameReduce::join(GameReduce& rhs)
+{
+  for (unsigned int i = 0; i < 21; ++i) {
+    _playerHands[i].wins += rhs._playerHands[i].wins;
+    _playerHands[i].draws += rhs._playerHands[i].draws;
+    _playerHands[i].losses += rhs._playerHands[i].losses;
+  }
+}
+
+
+void GameReduce::finish()
+{
+  // Find the player hands with the best, second best and worst results.
+  std::sort(_playerHands, _playerHands + 21, ComparePlayerHandsDescending);
+  _game.best = _playerHands[0];
+  _game.secondBest = _playerHands[1];
+  _game.worst = _playerHands[20];
+
+  // Clean up the memory for the playerHand combinations.
+  for (unsigned int i = 0; i < 21; ++i)
+    delete[] _playerHands[i].combination;
 }
 
 
@@ -376,64 +496,6 @@ void DebugPrintPlayerVsDealer(const std::vector<Card>& playerCards,
 }
 
 
-void PlayGame(Game& game)
-{
-  // We assume that the player always has 7 cards.
-
-  // Calculate the scores for all possible player hands.
-  Combinations playerCombos(7, 2);
-  PlayerHand playerHands[21];
-  unsigned int i = 0;
-  do {
-    playerHands[i].index = i;
-    playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
-    playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
-
-    playerHands[i].combination = new unsigned int[2];
-    playerHands[i].combination[0] = playerCombos.current()[0];
-    playerHands[i].combination[1] = playerCombos.current()[1];
-
-    ++i;
-  } while (playerCombos.next());
-
-  // For each possible dealer hand, play each possible player hand against it and record the results.
-  std::vector<Card> tmpDealerHand(7);
-  Combinations dealerCombos(game.dealerCards.size(), 7);
-  do {
-    for (unsigned int i = 0; i < 7; ++i)
-      tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
-    
-    Combinations dealerHandCombos(7, 2);
-    do {
-      unsigned int dealerLowScore = ScoreLowHand(tmpDealerHand, dealerHandCombos);
-      unsigned int dealerHighScore = ScoreHighHand(tmpDealerHand, dealerHandCombos);
-      for (unsigned int i = 0; i < 21; ++i) {
-        unsigned int playerLowScore = playerHands[i].lowHandScore;
-        unsigned int playerHighScore = playerHands[i].highHandScore;
-        if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore) {
-          ++playerHands[i].wins;
-          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "WIN");
-        }
-        else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore) {
-          ++playerHands[i].losses;
-          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "LOSS");
-        }
-        else {
-          ++playerHands[i].draws;
-          DebugPrintPlayerVsDealer(game.playerCards, playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "DRAW");
-        }
-      }
-    } while (dealerHandCombos.next());
-  } while (dealerCombos.next());
-
-  // Find the player hands with the best, second best and worst results.
-  std::sort(playerHands, playerHands + 21, ComparePlayerHandsDescending);
-  game.best = playerHands[0];
-  game.secondBest = playerHands[1];
-  game.worst = playerHands[20];
-}
-
-
 void PrintCard(const Card& card)
 {
   const char* values = "23456789XJQKA";
@@ -482,6 +544,11 @@ void PrintGames(const std::vector<Game>& games,
 
 int main(int argc, char** argv)
 {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <infile>\n", argv[0]);
+    return -1;
+  }
+
   // Start timing.
   tbb::tick_count startTime = tbb::tick_count::now();
   
@@ -496,8 +563,13 @@ int main(int argc, char** argv)
 
   // For each game
   std::vector<Game>::iterator g;
-  for (g = games.begin(); g != games.end(); ++g)
-    PlayGame(*g);
+  for (g = games.begin(); g != games.end(); ++g) {
+    GameReduce gameReduce(*g);
+    //tbb::parallel_reduce(tbb::blocked_range<unsigned int>(0, Choose(g->dealerCards.size(), 7) * 21), gameReduce);
+    gameReduce(tbb::blocked_range<unsigned int>(0, Choose(g->dealerCards.size(), 7)));
+    gameReduce.finish();
+    *g = gameReduce._game;
+  }
 
   // Stop timing.
   tbb::tick_count endTime = tbb::tick_count::now();
