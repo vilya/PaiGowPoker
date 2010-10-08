@@ -29,6 +29,9 @@ General
   - Can check for three of a kind by AND-ing all combos of 3 suits together.
   - Can check for four of a kind by AND-ing all suits together.
 
+- Store the card values pre-bitshifted (i.e. store a 7 as 1 << 7) so we can
+  avoid redoing all the bit shifts in the inner loop.
+
 - Need to be able to calculate the nth combination directly, as well as
   iteratively.
 
