@@ -319,19 +319,19 @@ Card ParseCard(const char* card)
 {
   Card c;
   switch (card[0]) {
-    case '2': c.value =  0; break;
-    case '3': c.value =  1; break;
-    case '4': c.value =  2; break;
-    case '5': c.value =  3; break;
-    case '6': c.value =  4; break;
-    case '7': c.value =  5; break;
-    case '8': c.value =  6; break;
-    case '9': c.value =  7; break;
-    case 'X': c.value =  8; break;
-    case 'J': c.value =  9; break;
-    case 'Q': c.value = 10; break;
-    case 'K': c.value = 11; break;
-    case 'A': c.value = 12; break;
+    case '2': c.value = (1 << 0); break;
+    case '3': c.value = (1 << 1); break;
+    case '4': c.value = (1 << 2); break;
+    case '5': c.value = (1 << 3); break;
+    case '6': c.value = (1 << 4); break;
+    case '7': c.value = (1 << 5); break;
+    case '8': c.value = (1 << 6); break;
+    case '9': c.value = (1 << 7); break;
+    case 'X': c.value = (1 << 8); break;
+    case 'J': c.value = (1 << 9); break;
+    case 'Q': c.value = (1 << 10); break;
+    case 'K': c.value = (1 << 11); break;
+    case 'A': c.value = (1 << 12); break;
     default: c.value = 0; break;
   }
   switch (card[1]) {
@@ -355,7 +355,8 @@ std::vector<Card> ParseHand(char* line)
   for (const char* card = line; *card != '\0'; card += 2)
     cards.push_back(ParseCard(card));
 
-  std::sort(cards.begin(), cards.end(), CompareCardsDescending);
+  // This is only needed for generating comparable output.
+  //std::sort(cards.begin(), cards.end(), CompareCardsDescending);
   return cards;
 }
 
@@ -395,10 +396,9 @@ unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& co
   const Card& a = cards[combo.current()[0]];
   const Card& b = cards[combo.current()[1]];
 
-  unsigned int score = (a.value >= b.value) ?
-    (a.value * 13 + b.value) : (b.value * 13 + a.value);
+  unsigned int score = a.value | b.value;
   if (a.value == b.value)
-    score += 1000;
+    score |= (1 << 13);
   return score;
 }
 
@@ -413,7 +413,7 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
   unsigned int suits[4] = { 0, 0, 0, 0 };
   for (unsigned int i = 0; i < cards.size(); ++i) {
     if (i != combo.current()[0] && i != combo.current()[1])
-      suits[cards[i].suit] |= (1 << cards[i].value);
+      suits[cards[i].suit] |= cards[i].value;
   }
 
   unsigned int groups = suits[0] | suits[1] | suits[2] | suits[3];
@@ -508,7 +508,7 @@ void PrintCard(const Card& card)
   const char* values = "23456789XJQKA";
   const char* suits = "CDHS";
 
-  printf("%c%c", values[card.value], suits[card.suit]);
+  printf("%c%c", values[__builtin_ctz(card.value)], suits[card.suit]);
 }
 
 
