@@ -100,14 +100,14 @@ std::vector<Game> ParseGames(FILE* f);
 bool CompareCardsDescending(const Card& a, const Card& b);
 bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b);
 
-unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo);
-unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo);
+unsigned int ScoreLowHand(const Card cards[], const Combinations& combo);
+unsigned int ScoreHighHand(const Card cards[], const Combinations& combo);
 
-void DebugPrintHand(const std::vector<Card>& cards,
+void DebugPrintHand(const Card cards[],
                     const unsigned int* indexes);
-void DebugPrintPlayerVsDealer(const std::vector<Card>& playerCards,
+void DebugPrintPlayerVsDealer(const Card playerCards[],
                               const unsigned int* playerCombo,
-                              const std::vector<Card>& dealerCards,
+                              const Card dealerCards[],
                               const unsigned int* dealerCombo,
                               const char* result);
 
@@ -206,8 +206,8 @@ GameReduce::GameReduce(const Game& game) :
   unsigned int i = 0;
   do {
     _playerHands[i].index = i;
-    _playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
-    _playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
+    _playerHands[i].lowHandScore = ScoreLowHand(game.playerCards.data(), playerCombos);
+    _playerHands[i].highHandScore = ScoreHighHand(game.playerCards.data(), playerCombos);
     _playerHands[i].wins = 0;
     _playerHands[i].draws = 0;
     _playerHands[i].losses = 0;
@@ -238,13 +238,13 @@ void GameReduce::operator () (const tbb::blocked_range<unsigned int>& range)
   const Game& game = _game;
 
   // For each possible dealer hand, play each possible player hand against it and record the results.
-  std::vector<Card> tmpDealerHand(7);
+  Card tmpDealerHand[7];
   Combinations dealerCombos(game.dealerCards.size(), 7);
 
   dealerCombos.jumpTo(range.begin());
   for (unsigned int index = range.begin(); index < range.end(); ++index) {
     for (unsigned int i = 0; i < 7; ++i)
-      tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
+      tmpDealerHand[i] = game.dealerCards.data()[dealerCombos.current()[i]];
     
     Combinations dealerHandCombos(7, 2);
     do {
@@ -255,15 +255,15 @@ void GameReduce::operator () (const tbb::blocked_range<unsigned int>& range)
         unsigned int playerHighScore = _playerHands[i].highHandScore;
         if (playerLowScore > dealerLowScore && playerHighScore > dealerHighScore) {
           ++_playerHands[i].wins;
-          //DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "WIN");
+          //DebugPrintPlayerVsDealer(game.playerCards.data(), _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "WIN");
         }
         else if (playerLowScore < dealerLowScore && playerHighScore < dealerHighScore) {
           ++_playerHands[i].losses;
-          //DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "LOSS");
+          //DebugPrintPlayerVsDealer(game.playerCards.data(), _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "LOSS");
         }
         else {
           ++_playerHands[i].draws;
-          //DebugPrintPlayerVsDealer(game.playerCards, _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "DRAW");
+          //DebugPrintPlayerVsDealer(game.playerCards.data(), _playerHands[i].combination, tmpDealerHand, dealerHandCombos.current(), "DRAW");
         }
       }
     } while (dealerHandCombos.next());
@@ -391,7 +391,7 @@ bool ComparePlayerHandsDescending(const PlayerHand& a, const PlayerHand& b)
 }
 
 
-unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& combo)
+unsigned int ScoreLowHand(const Card cards[], const Combinations& combo)
 {
   const Card& a = cards[combo.current()[0]];
   const Card& b = cards[combo.current()[1]];
@@ -403,7 +403,7 @@ unsigned int ScoreLowHand(const std::vector<Card>& cards, const Combinations& co
 }
 
 
-unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& combo)
+unsigned int ScoreHighHand(const Card cards[], const Combinations& combo)
 {
   // This function assumes that there are 7 cards in the cards vector and that
   // the combo describes the low hand, i.e. the two cards which AREN'T in this
@@ -411,7 +411,7 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
 
   // Get the current hand.
   unsigned int suits[4] = { 0, 0, 0, 0 };
-  for (unsigned int i = 0; i < cards.size(); ++i) {
+  for (unsigned int i = 0; i < 7; ++i) {
     if (i != combo.current()[0] && i != combo.current()[1])
       suits[cards[i].suit] |= cards[i].value;
   }
@@ -473,14 +473,14 @@ unsigned int ScoreHighHand(const std::vector<Card>& cards, const Combinations& c
 }
 
 
-void DebugPrintHand(const std::vector<Card>& cards,
+void DebugPrintHand(const Card cards[],
                     const unsigned int* indexes)
 {
   PrintCard(cards[indexes[0]]);
   printf(" ");
   PrintCard(cards[indexes[1]]);
   printf(" |");
-  for (unsigned int i = 0; i < cards.size(); ++i) {
+  for (unsigned int i = 0; i < 7; ++i) {
     if (i != indexes[0] && i != indexes[1]) {
       printf(" ");
       PrintCard(cards[i]);
@@ -489,9 +489,9 @@ void DebugPrintHand(const std::vector<Card>& cards,
 }
 
 
-void DebugPrintPlayerVsDealer(const std::vector<Card>& playerCards,
+void DebugPrintPlayerVsDealer(const Card playerCards[],
                               const unsigned int* playerCombo,
-                              const std::vector<Card>& dealerCards,
+                              const Card dealerCards[],
                               const unsigned int* dealerCombo,
                               const char* result)
 {
