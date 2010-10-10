@@ -1,5 +1,5 @@
 This is my entry for the Intel Threading Challenge, Phase 2, Problem 3,
-Amateur Level.
+Amateur Level: Reduced-deck Pai Gow Poker
 
 
 Pre-requisites

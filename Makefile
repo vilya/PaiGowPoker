@@ -1,7 +1,9 @@
-TBBHOME = /Users/vilya/Code/3rdParty/tbb30_018oss
+# Note that you need to have the TBB environment variables set up before
+# calling Make. You do this by sourcing the tbbvars.sh script that ships with
+# TBB. For example, on 64-bit linux:
+# 
+#   source /opt/intel/tbb/3.0/bin/tbbvars.sh intel64
 
-INCFLAGS = -I$(TBBHOME)/include
-LIBFLAGS = -L$(TBBHOME)/lib
 LIBS = -ltbb
 
 CXXFLAGS = -O3 -Wall
@@ -9,7 +11,7 @@ CXX = g++
 
 
 paigow: paigow.cpp
-	$(CXX) $(CXXFLAGS) $(INCFLAGS) $(LIBFLAGS) $(LIBS) -o $@ $<
+	$(CXX) $(CXXFLAGS) $(LIBS) -o $@ $<
 
 
 clean:
