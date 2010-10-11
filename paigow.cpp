@@ -22,7 +22,7 @@ public:
   bool next();
   bool jumpTo(unsigned int n);
 
-  const unsigned int* current() const;
+  inline const unsigned int* current() const;
 
 private:
   const unsigned int _kTotal;
@@ -58,14 +58,15 @@ struct PlayerHand
 
 struct Game
 {
-  std::vector<Card> playerCards;
-  std::vector<Card> dealerCards;
+  Card playerCards[7];
+  Card* dealerCards;
+  unsigned int numDealerCards;
 
   PlayerHand best;
   PlayerHand secondBest;
   PlayerHand worst;
 
-  Game() : playerCards(), dealerCards(), best(), secondBest(), worst() {}
+  Game() : playerCards(), dealerCards(), numDealerCards(0), best(), secondBest(), worst() {}
 };
 
 
@@ -195,8 +196,8 @@ GameReduce::GameReduce(const Game& game) :
   unsigned int i = 0;
   do {
     _playerHands[i].index = i;
-    _playerHands[i].lowHandScore = ScoreLowHand(game.playerCards.data(), playerCombos);
-    _playerHands[i].highHandScore = ScoreHighHand(game.playerCards.data(), playerCombos);
+    _playerHands[i].lowHandScore = ScoreLowHand(game.playerCards, playerCombos);
+    _playerHands[i].highHandScore = ScoreHighHand(game.playerCards, playerCombos);
     _playerHands[i].wins = 0;
     _playerHands[i].draws = 0;
     _playerHands[i].losses = 0;
@@ -224,12 +225,12 @@ void GameReduce::operator () (const tbb::blocked_range<unsigned int>& range)
 
   // For each possible dealer hand, play each possible player hand against it and record the results.
   Card tmpDealerHand[7];
-  Combinations dealerCombos(game.dealerCards.size(), 7);
+  Combinations dealerCombos(game.numDealerCards, 7);
 
   dealerCombos.jumpTo(range.begin());
   for (unsigned int index = range.begin(); index < range.end(); ++index) {
     for (unsigned int i = 0; i < 7; ++i)
-      tmpDealerHand[i] = game.dealerCards.data()[dealerCombos.current()[i]];
+      tmpDealerHand[i] = game.dealerCards[dealerCombos.current()[i]];
     
     Combinations dealerHandCombos(7, 2);
     do {
@@ -338,14 +339,24 @@ std::vector<Game> ParseGames(FILE* f)
 {
   std::vector<Game> games;
   char line[256];
+  std::vector<Card> cards;
+
   while (!feof(f)) {
     Game game;
     if (!fgets(line, 256, f))
       break;
-    game.playerCards = ParseHand(line);
+    cards = ParseHand(line);
+    for (unsigned int i = 0; i < 7; ++i)
+      game.playerCards[i] = cards[i];
+
     if (!fgets(line, 256, f))
       break;
-    game.dealerCards = ParseHand(line);
+    cards = ParseHand(line);
+    game.numDealerCards = cards.size();
+    game.dealerCards = new Card[game.numDealerCards];
+    for (unsigned int i = 0; i < game.numDealerCards; ++i)
+      game.dealerCards[i] = cards[i];
+
     games.push_back(game);
   }
   return games;
@@ -455,9 +466,9 @@ void PrintCard(const Card& card)
 }
 
 
-void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHand& hand)
+void PrintHand(const char* title, const Card cards[], const PlayerHand& hand)
 {
-  Combinations combo(cards.size(), 2);
+  Combinations combo(7, 2);
   combo.jumpTo(hand.index);
 
   printf("%s:\t", title);
@@ -466,7 +477,7 @@ void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHa
   printf(" ");
   PrintCard(cards[indexes[1]]);
   printf(" |");
-  for (unsigned int i = 0; i < cards.size(); ++i) {
+  for (unsigned int i = 0; i < 7; ++i) {
     if (i != indexes[0] && i != indexes[1]) {
       printf(" ");
       PrintCard(cards[i]);
@@ -514,7 +525,7 @@ int main(int argc, char** argv)
   // For each game
   std::vector<Game>::iterator g;
   for (g = games.begin(); g != games.end(); ++g) {
-    const unsigned int kNumDealerCombos = Choose(g->dealerCards.size(), 7);
+    const unsigned int kNumDealerCombos = Choose(g->numDealerCards, 7);
     GameReduce gameReduce(*g);
     tbb::parallel_reduce(tbb::blocked_range<unsigned int>(0, kNumDealerCombos), gameReduce);
     gameReduce.finish();
