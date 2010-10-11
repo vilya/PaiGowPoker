@@ -51,10 +51,7 @@ struct PlayerHand
   unsigned int draws;
   unsigned int losses;
 
-  //unsigned int* combination;
-
   PlayerHand() : index(0), lowHandScore(0), highHandScore(0), wins(0), draws(0), losses(0)
-  //   , combination(NULL)
   {}
 };
 
@@ -204,12 +201,6 @@ GameReduce::GameReduce(const Game& game) :
     _playerHands[i].draws = 0;
     _playerHands[i].losses = 0;
 
-    /*
-    _playerHands[i].combination = new unsigned int[2];
-    _playerHands[i].combination[0] = playerCombos.current()[0];
-    _playerHands[i].combination[1] = playerCombos.current()[1];
-    */
-
     ++i;
   } while (playerCombos.next());
 }
@@ -278,10 +269,6 @@ void GameReduce::finish()
   _game.best = _playerHands[0];
   _game.secondBest = _playerHands[1];
   _game.worst = _playerHands[20];
-
-  // Clean up the memory for the playerHand combinations.
-//  for (unsigned int i = 0; i < 21; ++i)
-//    delete[] _playerHands[i].combination;
 }
 
 
