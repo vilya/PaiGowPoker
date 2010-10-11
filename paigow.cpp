@@ -103,8 +103,7 @@ unsigned int ScoreHighHand(const Card cards[], const Combinations& combo);
 
 void PrintCard(const Card& card);
 void PrintHand(const char* title, const std::vector<Card>& cards, const PlayerHand& hand);
-void PrintGames(const std::vector<Game>& games,
-    const tbb::tick_count& startTime, const tbb::tick_count& endTime);
+void PrintGames(const std::vector<Game>& games);
 
 
 //
@@ -487,8 +486,7 @@ void PrintHand(const char* title, const Card cards[], const PlayerHand& hand)
 }
 
 
-void PrintGames(const std::vector<Game>& games,
-    const tbb::tick_count& startTime, const tbb::tick_count& endTime)
+void PrintGames(const std::vector<Game>& games)
 {
   for (unsigned int gameNum = 0; gameNum < games.size(); ++gameNum) {
     const Game& g = games[gameNum];
@@ -499,7 +497,6 @@ void PrintGames(const std::vector<Game>& games,
     PrintHand("2nd", g.playerCards, g.secondBest);
     PrintHand("Worst", g.playerCards, g.worst);
   }
-  fprintf(stderr, "\nPlay completed in %6.4f seconds.\n", (endTime - startTime).seconds());
 }
 
 
@@ -532,11 +529,12 @@ int main(int argc, char** argv)
     *g = gameReduce._game;
   }
 
+  // Print the results.
+  PrintGames(games);
+
   // Stop timing.
   tbb::tick_count endTime = tbb::tick_count::now();
-
-  // Print the results.
-  PrintGames(games, startTime, endTime);
+  fprintf(stderr, "\nPlay completed in %6.4f seconds.\n", (endTime - startTime).seconds());
 
   return 0;
 }
