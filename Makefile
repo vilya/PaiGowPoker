@@ -6,7 +6,7 @@
 
 LIBS = -ltbb
 
-CXXFLAGS = -O3 -Wall
+CXXFLAGS = -O3 -Wall -funroll-loops
 CXX = g++
 
 
